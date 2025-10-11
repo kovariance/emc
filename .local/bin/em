@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# ~/.local/bin/em — launch terminal-only Emacs daemon
+
+# Start daemon if not already running
+if ! emacsclient -e "(daemonp)" &>/dev/null; then
+    emacs --daemon
+fi
+
+# Open terminal client
+exec emacsclient -t "$@"
