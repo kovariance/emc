@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-# Usage: web <url>
-firefox --new-window "$1"

@@ -1,4 +1,0 @@
-#!/usr/bin/env bash
-# Usage: t <command>
-# launches app in term
-cosmic-term -e bash -lc "$*"
