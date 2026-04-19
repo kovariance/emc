@@ -49,16 +49,17 @@ start_daemon() {
     echo "Starting Emacs daemon..."
     if [[ "$GUI_MODE" == "1" ]]; then
         $CONTAINER_RUNTIME run -d \
-            --privileged \
+            --userns=keep-id \
             --name "$HOSTNAME" \
             -v "${EMC_WORKSPACE:-$WORKSPACE_DIR}:/workspace" \
             --hostname "$HOSTNAME" \
-            -v "/run/user/1000/wayland-0:/run/user/1000/wayland-0" \
+            -v "/run/user/1000/wayland-0:/run/user/1000/wayland-0:z" \
             -e "WAYLAND_DISPLAY=wayland-0" \
             -e "XDG_RUNTIME_DIR=/run/user/1000" \
-            "$IMAGE_NAME" emacs-pgtk --daemon
+            "$IMAGE_NAME" emacs --daemon
     else
         $CONTAINER_RUNTIME run -d \
+            --userns=keep-id \
             --name "$HOSTNAME" \
             -v "${EMC_WORKSPACE:-$WORKSPACE_DIR}:/workspace" \
             --hostname "$HOSTNAME" \
@@ -140,7 +141,8 @@ case "$MODE" in
         if [[ "$GUI_MODE" == "1" ]]; then
             # GUI mode - pass Wayland socket and vars
             $CONTAINER_RUNTIME run -it --rm \
-                --privileged \
+                --userns=keep-id \
+                --security-opt label=disable \
                 -v "${EMC_WORKSPACE:-$WORKSPACE_DIR}:/workspace" \
                 --hostname "$HOSTNAME" \
                 -v "/run/user/1000/wayland-0:/run/user/1000/wayland-0" \

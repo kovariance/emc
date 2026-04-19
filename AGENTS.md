@@ -15,6 +15,7 @@ make clean      # Remove temp files
 - `Dockerfile` - Fedora-based Emacs container
 - `Makefile` - Build automation
 - `emacs/init.el` - Emacs configuration
+- `juliamono/` - Font files
 
 ## Container Details
 
@@ -22,6 +23,10 @@ make clean      # Remove temp files
 - User: emacsuser (UID 1000)
 - Workspace: /workspace (mounted from host PWD)
 - Emacs config: /home/emacsuser/.emacs.d/init.el
+
+## GUI Mode (emc -g)
+
+Requires `--security-opt label=disable` to access Wayland socket due to SELinux. This is needed on Fedora to allow container access to the host's Wayland compositor.
 
 ## Adding New Files
 

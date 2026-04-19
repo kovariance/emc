@@ -12,6 +12,10 @@ RUN mkdir -p /workspace && chown -R emacsuser:emacsuser /workspace
 # Copy Emacs configuration
 COPY --chown=emacsuser:emacsuser emacs/ /home/emacsuser/.emacs.d/
 
+# Copy JuliaMono fonts
+COPY --chown=emacsuser:emacsuser juliamono/ /home/emacsuser/.local/share/fonts/juliamono/
+RUN fc-cache -f /home/emacsuser/.local/share/fonts
+
 # Remove any stale ~/.emacs that would shadow ~/.emacs.d/init.el
 RUN rm -f /home/emacsuser/.emacs
 

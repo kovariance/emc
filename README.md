@@ -37,6 +37,7 @@ emc             # Start Emacs terminal in container
 
 ```bash
 emc              # Start Emacs terminal (default)
+emc -g           # Start Emacs GUI (Wayland)
 emc file.txt     # Open file.txt in Emacs
 emc -d           # Start Emacs daemon
 emc -c           # Connect to running daemon
