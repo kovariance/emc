@@ -1,0 +1,144 @@
+#!/bin/bash
+
+set -e
+
+# Detect container runtime
+CONTAINER_RUNTIME=""
+if command -v podman >/dev/null 2>&1; then
+    CONTAINER_RUNTIME="podman"
+elif command -v docker >/dev/null 2>&1; then
+    CONTAINER_RUNTIME="docker"
+else
+    echo "Error: Neither podman nor docker found in PATH" >&2
+    exit 1
+fi
+
+IMAGE_NAME="emacs-container"
+WORKSPACE_DIR="${PWD}"
+HOSTNAME="emacs-container-$(hostname)"
+
+show_help() {
+    cat << EOF
+emc - Emacs Container Wrapper
+
+Usage: emc [OPTIONS] [FILE...]
+
+Options:
+  -h, --help      Show this help message
+  -n, --new       Start a new Emacs instance (default)
+  -d, --daemon    Start Emacs in daemon mode
+  -c, --client    Connect to running Emacs daemon
+  -k, --kill      Stop the Emacs daemon
+  --version       Show Emacs version in container
+
+Environment variables:
+  EMC_WORKSPACE   Directory to mount as workspace (default: current directory)
+  EMC_IMAGE       Container image name (default: $IMAGE_NAME)
+
+Examples:
+  emc                     # Start Emacs GUI with current directory
+  emc file.txt            # Open file.txt in Emacs
+  emc -d                  # Start Emacs daemon
+  emc -c                  # Connect to daemon
+  emc --version           # Show Emacs version
+EOF
+}
+
+start_daemon() {
+    echo "Starting Emacs daemon..."
+    $CONTAINER_RUNTIME run -d \
+        --name "$HOSTNAME" \
+        -v "${EMC_WORKSPACE:-$WORKSPACE_DIR}:/workspace" \
+        --hostname "$HOSTNAME" \
+        "$IMAGE_NAME" emacs --daemon
+    echo "Emacs daemon started."
+}
+
+connect_client() {
+    echo "Connecting to Emacs daemon..."
+    $CONTAINER_RUNTIME exec -it \
+        "$HOSTNAME" emacsclient -nw "$@"
+}
+
+kill_daemon() {
+    echo "Stopping Emacs daemon..."
+    $CONTAINER_RUNTIME stop "$HOSTNAME" >/dev/null 2>&1 || true
+    $CONTAINER_RUNTIME rm "$HOSTNAME" >/dev/null 2>&1 || true
+    echo "Emacs daemon stopped."
+}
+
+# Parse command line arguments
+MODE="new"
+FILES=()
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        -n|--new)
+            MODE="new"
+            shift
+            ;;
+        -d|--daemon)
+            MODE="daemon"
+            shift
+            ;;
+        -c|--client)
+            MODE="client"
+            shift
+            ;;
+        -k|--kill)
+            MODE="kill"
+            shift
+            ;;
+        --version)
+            MODE="version"
+            shift
+            ;;
+        -*)
+            echo "Unknown option: $1" >&2
+            show_help
+            exit 1
+            ;;
+        *)
+            FILES+=("$1")
+            shift
+            ;;
+    esac
+done
+
+# Check if image exists
+if ! $CONTAINER_RUNTIME image inspect "$IMAGE_NAME" >/dev/null 2>&1; then
+    echo "Error: Container image '$IMAGE_NAME' not found." >&2
+    echo "Run 'make install' first to build and install." >&2
+    exit 1
+fi
+
+case "$MODE" in
+    new)
+        # Start new Emacs instance
+        $CONTAINER_RUNTIME run -it --rm \
+            -v "${EMC_WORKSPACE:-$WORKSPACE_DIR}:/workspace" \
+            --hostname "$HOSTNAME" \
+            "$IMAGE_NAME" emacs -nw "${FILES[@]}"
+        ;;
+    daemon)
+        kill_daemon
+        start_daemon
+        ;;
+    client)
+        connect_client "${FILES[@]}"
+        ;;
+    kill)
+        kill_daemon
+        ;;
+    version)
+        $CONTAINER_RUNTIME run --rm "$IMAGE_NAME" emacs --version
+        ;;
+    *)
+        echo "Unknown mode: $MODE" >&2
+        exit 1
+        ;;
+esac

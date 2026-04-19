@@ -1,0 +1,133 @@
+#!/usr/bin/env perl
+# install/uninstall dotfiles into $HOME via symlinks
+#
+# Usage:
+#   ./install           # install (default)
+#   ./install install
+#   ./install uninstall
+#
+# To add new files, just append entries to @manifest below.
+# Each entry is: [source_relative_to_repo, target_relative_to_HOME]
+# Globs are expanded automatically.
+
+use strict;
+use warnings;
+use File::Basename qw(dirname);
+use File::Path     qw(make_path);
+use File::Glob     qw(bsd_glob);
+use Cwd            qw(abs_path);
+
+# ---------- manifest --------------------------------------------------
+# [repo_path_or_glob, target_path_under_$HOME]
+#
+# If target ends with '/', each matched file is placed inside that dir
+# preserving only the basename.  Otherwise it's a 1:1 mapping.
+
+my @manifest = (
+    # emacs
+    ['emacs/init.el',   '.config/emacs/init.el'],
+
+    # scripts
+    ['bin/em',          '.local/bin/em'],
+    ['bin/em-restart',  '.local/bin/em-restart'],
+
+    # fonts (glob -> directory)
+    ['juliamono/*.ttf', '.local/share/fonts/'],
+);
+# ----------------------------------------------------------------------
+
+my $repo = dirname(abs_path($0));
+my $home = $ENV{HOME} // die "HOME is not set\n";
+
+my $action = $ARGV[0] // 'install';
+$action eq 'install' || $action eq 'uninstall'
+    or die "Usage: $0 [install|uninstall]\n";
+
+my $fonts_changed = 0;
+
+for my $entry (@manifest) {
+    my ($src_pat, $tgt_pat) = @$entry;
+
+    # Expand globs in the source
+    my @sources = bsd_glob("$repo/$src_pat");
+    unless (@sources) {
+        warn "warning: no files matched '$src_pat'\n";
+        next;
+    }
+
+    my $tgt_is_dir = $tgt_pat =~ m{/$};
+
+    for my $src (@sources) {
+        my $tgt;
+        if ($tgt_is_dir) {
+            my $base = (File::Basename::fileparse($src))[0];
+            $tgt = "$home/$tgt_pat$base";
+        } else {
+            $tgt = "$home/$tgt_pat";
+        }
+
+        if ($action eq 'install') {
+            install_link($src, $tgt);
+        } else {
+            remove_link($src, $tgt);
+        }
+    }
+}
+
+if ($fonts_changed && -x '/usr/bin/fc-cache') {
+    print "Updating font cache...\n";
+    system('fc-cache', '-f') == 0
+        or warn "warning: fc-cache failed\n";
+}
+
+# ---------- helpers ---------------------------------------------------
+
+sub install_link {
+    my ($src, $tgt) = @_;
+
+    if (-l $tgt) {
+        if (readlink($tgt) eq $src) {
+            print "ok       $tgt\n";
+            return;
+        }
+        unlink $tgt;
+    } elsif (-e $tgt) {
+        warn "warning: $tgt exists and is not a symlink, skipping\n";
+        return;
+    }
+
+    my $dir = dirname($tgt);
+    unless (-d $dir) {
+        eval { make_path($dir) };
+        if ($@) {
+            warn "error: cannot create $dir: $@\n";
+            return;
+        }
+    }
+
+    if (symlink($src, $tgt)) {
+        print "link     $tgt -> $src\n";
+        $fonts_changed = 1 if $tgt =~ /\.ttf$/;
+    } else {
+        warn "error: symlink $tgt -> $src: $!\n";
+    }
+}
+
+sub remove_link {
+    my ($src, $tgt) = @_;
+
+    if (-l $tgt && readlink($tgt) eq $src) {
+        if (unlink $tgt) {
+            print "remove   $tgt\n";
+            $fonts_changed = 1 if $tgt =~ /\.ttf$/;
+        } else {
+            warn "error: unlink $tgt: $!\n";
+        }
+    } elsif (-l $tgt) {
+        warn "skip     $tgt (symlink points elsewhere)\n";
+    } elsif (-e $tgt) {
+        warn "skip     $tgt (not a symlink)\n";
+    } else {
+        print "ok       $tgt (already absent)\n";
+    }
+}

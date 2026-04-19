@@ -1,4 +1,4 @@
-3;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; 00 General
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (setq user-full-name "Michael Tomas Kovarik"
@@ -155,7 +155,8 @@
   :mode "\\.jl\\'")
 (use-package lsp-julia :config (add-hook 'julia-mode-hook 'lsp))
 (use-package julia-snail
-  :after vterm julia-mode
+  :after julia-mode
+  :custom (julia-snail-terminal-type :eat)
   :hook (julia-mode . julia-snail-mode))
 
 (use-package eglot
@@ -217,11 +218,11 @@
 
 (setq-default select-enable-clipboard t) ; Merge system's and Emacs' clipboard
 
-(set-frame-font "JuliaMono 16" nil t)
+(when (display-graphic-p) (set-frame-font "JuliaMono 16" nil t))
 
 (menu-bar-mode 0)
-(tool-bar-mode 0)
-(scroll-bar-mode 0)
+(when (fboundp 'tool-bar-mode) (tool-bar-mode 0))
+(when (fboundp 'scroll-bar-mode) (scroll-bar-mode 0))
 (column-number-mode t)
 (setq inhibit-startup-screen t)
 (blink-cursor-mode 0)
