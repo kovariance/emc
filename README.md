@@ -12,22 +12,6 @@ Personal dotfiles with an Emacs config and containerized Emacs environment.
 | `juliamono/*.ttf` | `~/.local/share/fonts/` | JuliaMono + Nerd Font symbols |
 | `emc` | `/usr/local/bin/emc` | Container wrapper (via `make install`) |
 
-## Local Setup
-
-Manual symlink setup:
-```bash
-mkdir -p ~/.config/emacs
-ln -sf "$(pwd)/emacs/init.el" ~/.config/emacs/init.el
-
-mkdir -p ~/.local/bin
-ln -sf "$(pwd)/bin/em" ~/.local/bin/em
-ln -sf "$(pwd)/bin/em-restart" ~/.local/bin/em-restart
-
-mkdir -p ~/.local/share/fonts
-ln -sf "$(pwd)/juliamono/"*.ttf ~/.local/share/fonts/
-fc-cache -f ~/.local/share/fonts
-```
-
 ## Containerized Emacs
 
 Runs Emacs in a Podman/Docker container with Fedora.

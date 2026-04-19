@@ -1,6 +1,6 @@
 FROM quay.io/fedora/fedora:43
 
-RUN dnf -y install emacs git curl wget bash sudo @fonts xdg-utils && dnf clean all
+RUN dnf -y install emacs emacs-pgtk git curl wget bash sudo @fonts xdg-utils && dnf clean all
 
 # Create a non-root user for running Emacs
 RUN useradd -m -u 1000 emacsuser && \
