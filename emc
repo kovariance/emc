@@ -25,7 +25,8 @@ Usage: emc [OPTIONS] [FILE...]
 
 Options:
   -h, --help      Show this help message
-  -n, --new       Start a new Emacs instance (default)
+  -g, --gui       Start Emacs in GUI mode (Wayland)
+  -n, --new       Start a new Emacs instance (terminal, default)
   -d, --daemon    Start Emacs in daemon mode
   -c, --client    Connect to running Emacs daemon
   -k, --kill      Stop the Emacs daemon
@@ -46,11 +47,23 @@ EOF
 
 start_daemon() {
     echo "Starting Emacs daemon..."
-    $CONTAINER_RUNTIME run -d \
-        --name "$HOSTNAME" \
-        -v "${EMC_WORKSPACE:-$WORKSPACE_DIR}:/workspace" \
-        --hostname "$HOSTNAME" \
-        "$IMAGE_NAME" emacs --daemon
+    if [[ "$GUI_MODE" == "1" ]]; then
+        $CONTAINER_RUNTIME run -d \
+            --security-opt label=type:container_runtime_t \
+            --name "$HOSTNAME" \
+            -v "${EMC_WORKSPACE:-$WORKSPACE_DIR}:/workspace" \
+            --hostname "$HOSTNAME" \
+            -v "/run/user/1000/wayland-0:/run/user/1000/wayland-0" \
+            -e "WAYLAND_DISPLAY=wayland-0" \
+            -e "XDG_RUNTIME_DIR=/run/user/1000" \
+            "$IMAGE_NAME" emacs --daemon
+    else
+        $CONTAINER_RUNTIME run -d \
+            --name "$HOSTNAME" \
+            -v "${EMC_WORKSPACE:-$WORKSPACE_DIR}:/workspace" \
+            --hostname "$HOSTNAME" \
+            "$IMAGE_NAME" emacs --daemon
+    fi
     echo "Emacs daemon started."
 }
 
@@ -69,6 +82,7 @@ kill_daemon() {
 
 # Parse command line arguments
 MODE="new"
+GUI_MODE=0
 FILES=()
 
 while [[ $# -gt 0 ]]; do
@@ -83,6 +97,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -d|--daemon)
             MODE="daemon"
+            shift
+            ;;
+        -g|--gui)
+            GUI_MODE=1
             shift
             ;;
         -c|--client)
@@ -119,10 +137,23 @@ fi
 case "$MODE" in
     new)
         # Start new Emacs instance
-        $CONTAINER_RUNTIME run -it --rm \
-            -v "${EMC_WORKSPACE:-$WORKSPACE_DIR}:/workspace" \
-            --hostname "$HOSTNAME" \
-            "$IMAGE_NAME" emacs -nw "${FILES[@]}"
+        if [[ "$GUI_MODE" == "1" ]]; then
+            # GUI mode - pass Wayland socket and vars
+            $CONTAINER_RUNTIME run -it --rm \
+                --security-opt label=type:container_runtime_t \
+                -v "${EMC_WORKSPACE:-$WORKSPACE_DIR}:/workspace" \
+                --hostname "$HOSTNAME" \
+                -v "/run/user/1000/wayland-0:/run/user/1000/wayland-0" \
+                -e "WAYLAND_DISPLAY=wayland-0" \
+                -e "XDG_RUNTIME_DIR=/run/user/1000" \
+                "$IMAGE_NAME" emacs "${FILES[@]}"
+        else
+            # Terminal mode
+            $CONTAINER_RUNTIME run -it --rm \
+                -v "${EMC_WORKSPACE:-$WORKSPACE_DIR}:/workspace" \
+                --hostname "$HOSTNAME" \
+                "$IMAGE_NAME" emacs -nw "${FILES[@]}"
+        fi
         ;;
     daemon)
         kill_daemon

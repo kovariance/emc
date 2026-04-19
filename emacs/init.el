@@ -14,30 +14,20 @@
         ("gnu-devel" . "https://elpa.gnu.org/devel/")
         ("Nongnu" . "https://elpa.nongnu.org/nongnu/")
         ("melpa" . "https://melpa.org/packages/")))
+(package-initialize)
+(unless package-archive-contents
+  (package-refresh-contents))
+
+(unless (package-installed-p 'use-package)
+  (package-install 'use-package))
+
 (eval-when-compile
   (add-to-list 'load-path "~/.config/emacs/use-package")
   (require 'use-package))
 
 (setq use-package-always-ensure t)
 
-;; straight
-(defvar bootstrap-version)
-(let ((bootstrap-file
-       (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
-      (bootstrap-version 5))
-  (unless (file-exists-p bootstrap-file)
-    (with-current-buffer
-        (url-retrieve-synchronously
-         "https://raw.githubusercontent.com/radian-software/straight.el/develop/install.el"
-         'silent 'inhibit-cookies)
-      (goto-char (point-max))
-      (eval-print-last-sexp)))
-  (load bootstrap-file nil 'nomessage))
 
-
-;; Use straight.el with use-package
-(straight-use-package 'use-package)
-(setq straight-use-package-by-default t)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; 02 Keyboard and Mouse
@@ -194,9 +184,6 @@
 (use-package gruvbox-theme
   :config
   (load-theme 'gruvbox-light-soft t))
-(straight-use-package
- '(nano-agenda :type git :host github
-	       :repo "rougier/nano-agenda"))
 (modify-all-frames-parameters
  '((right-dvidider-width . 30)
    (left-fringe . 30)

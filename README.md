@@ -1,58 +1,79 @@
-# dotfiles
+# Emacs Configuration & Container Setup
 
-Personal config files. Emacs, fonts, scripts.
+Personal dotfiles with an Emacs config and containerized Emacs environment.
 
-## Install
-
-```
-./install
-./install uninstall
-```
-
-Symlinks everything into `$HOME`. Idempotent. Won't clobber existing non-symlink files.
-
-## Adding files
-
-Edit the `@manifest` array in `install`:
-
-```perl
-['source/in/repo',  '.config/target/in/home'],   # 1:1
-['stuff/*.ext',     '.local/share/stuff/'],       # glob -> directory
-```
-
-## What's in here
+## Project Structure
 
 | Path | Installs to | What |
 |---|---|---|
-| `emacs/init.el` | `~/.config/emacs/init.el` | Emacs config (Evil, Eglot, Gruvbox) |
+| `emacs/init.el` | `~/.config/emacs/init.el` | Emacs config |
 | `bin/em` | `~/.local/bin/em` | Launch Emacs daemon client |
-| `bin/em-restart` | `~/.local/bin/em-restart` | Restart Emacs daemon |
+| `bin/em-restart` | `~/.local/bin/bin/em-restart` | Restart Emacs daemon |
 | `juliamono/*.ttf` | `~/.local/share/fonts/` | JuliaMono + Nerd Font symbols |
+| `emc` | `/usr/local/bin/emc` | Container wrapper (via `make install`) |
 
-## Containerized Emacs Setup
+## Local Setup
 
-For running Emacs in a container with Podman/Docker:
-
-### Installation
+Manual symlink setup:
 ```bash
-make install    # Builds container image and installs emc binary
-make test       # Tests container validity
-make uninstall  # Removes emc binary
+mkdir -p ~/.config/emacs
+ln -sf "$(pwd)/emacs/init.el" ~/.config/emacs/init.el
+
+mkdir -p ~/.local/bin
+ln -sf "$(pwd)/bin/em" ~/.local/bin/em
+ln -sf "$(pwd)/bin/em-restart" ~/.local/bin/em-restart
+
+mkdir -p ~/.local/share/fonts
+ln -sf "$(pwd)/juliamono/"*.ttf ~/.local/share/fonts/
+fc-cache -f ~/.local/share/fonts
 ```
 
-### Usage
+## Containerized Emacs
+
+Runs Emacs in a Podman/Docker container with Fedora.
+
+### Quick Start
+
 ```bash
-emc              # Start Emacs GUI with current directory
-emc -d           # Start Emacs daemon
-emc -c           # Connect to running daemon  
-emc -k           # Stop daemon
-emc --version    # Show Emacs version
-emc --help       # Show full usage
+make install    # Build container image and install emc binary
+emc             # Start Emacs terminal in container
 ```
 
-### Files
-| File | Purpose |
+### Make Targets
+
+| Target | Description |
 |---|---|
-| `Dockerfile` | Alpine-based Emacs container definition |
-| `Makefile` | Build, install, and test targets |
-| `emc` | Container wrapper script (installs to `/usr/local/bin`) |
+| `make build` | Build the Emacs container image |
+| `make install` | Build image and install emc binary to `~/.local/bin` |
+| `make test` | Run container validation tests |
+| `make uninstall` | Remove emc binary |
+| `make clean` | Remove build artifacts |
+
+### emc Usage
+
+```bash
+emc              # Start Emacs terminal (default)
+emc file.txt     # Open file.txt in Emacs
+emc -d           # Start Emacs daemon
+emc -c           # Connect to running daemon
+emc -k           # Stop daemon
+emc --version    # Show Emacs version in container
+emc --help       # Show help
+```
+
+### Environment Variables
+
+- `EMC_WORKSPACE` - Directory to mount as /workspace (default: PWD)
+- `EMC_IMAGE` - Container image name (default: emacs-container)
+
+## Emacs Features
+
+- **Evil** - Vim keybindings
+- **Eglot** - LSP client (Python, Julia, Java)
+- **Company** - Auto-completion
+- **Flycheck** - Syntax checking
+- **Magit** - Git interface
+- **Gruvbox** - Theme (light-soft)
+- **Doom-modeline** - Status line
+- **Org-modern** - Org mode styling
+- **Julia-snail** - Julia REPL integration
