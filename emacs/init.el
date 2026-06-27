@@ -18,12 +18,7 @@
 (unless package-archive-contents
   (package-refresh-contents))
 
-(unless (package-installed-p 'use-package)
-  (package-install 'use-package))
-
-(eval-when-compile
-  (add-to-list 'load-path "~/.config/emacs/use-package")
-  (require 'use-package))
+(require 'use-package)
 
 (setq use-package-always-ensure t)
 
@@ -69,6 +64,8 @@
     "wk" 'evil-window-up
     ;; Terminal
     "tm" 'eat
+    ;; opencode
+    "oc" 'agent-shell-opencode-start-agent
     ))
 
 
@@ -121,11 +118,12 @@
 ;; eat
 (use-package eat)
 
-;; eglot
+;; eglot (built-in since Emacs 29)
 (use-package eglot
   :hook ((python-mode . eglot-ensure)
-	 (java-mode . eglot-ensure)
-	 (julia-mode . eglot-ensure)
+         (julia-mode . eglot-ensure)
+         (typescript-ts-mode . eglot-ensure)
+         (js-ts-mode . eglot-ensure)
          (after-save . eglot-format))
   :config
   (setq eglot-report-progress nil)
@@ -136,25 +134,19 @@
 (use-package dap-mode
   :config
   (dap-ui-mode)
-  (dap-ui-controls-mode 1))
-
+  (dap-ui-controls-mode 1)
+  (require 'dap-python)
+  (require 'dap-julia)
+  (require 'dap-node)
+  (require 'dap-netcore))
 
 ;; Julia
-;; dap-julia not released until dap-mode 0.9
 (use-package julia-mode
   :mode "\\.jl\\'")
-(use-package lsp-julia :config (add-hook 'julia-mode-hook 'lsp))
 (use-package julia-snail
   :after julia-mode
   :custom (julia-snail-terminal-type :eat)
   :hook (julia-mode . julia-snail-mode))
-
-(use-package eglot
-  :hook ((python-mode . eglot-ensure)
-         (after-save . eglot-format))
-  :config
-  (add-to-list 'eglot-server-programs
-               '(python-mode . ("ruff" "server"))))
 
 ;; Enable company for auto-completion
 (use-package company
@@ -169,14 +161,18 @@
 ;; Enable magit for Git integration
 (use-package magit)
 
+;; opencode (via agent-shell)
+(use-package agent-shell
+  :ensure t
+  :config
+  (add-to-list 'exec-path (expand-file-name "~/.opencode/bin")))
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; 05 UI
 ;; MUST have JuliaMono font installed
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(use-package helm)
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; beep boop
 (setq visible-bell 1)
 
@@ -185,7 +181,7 @@
   :config
   (load-theme 'gruvbox-light-soft t))
 (modify-all-frames-parameters
- '((right-dvidider-width . 30)
+ '((right-divider-width . 30)
    (left-fringe . 30)
    (right-fringe . 30)))
 
@@ -213,6 +209,12 @@
 (column-number-mode t)
 (setq inhibit-startup-screen t)
 (blink-cursor-mode 0)
+
+;; Start in an eat terminal
+(add-hook 'window-setup-hook
+          (lambda ()
+            (when (fboundp 'eat)
+              (eat))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
